@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { useBookingStore, Booking } from "../../store/bookingStore";
-import { Search, Bell, Ticket, Gift, CreditCard, User, LogOut, Trash2, ChevronLeft } from "lucide-react";
+import { Search, Bell, Ticket, Gift, CreditCard, User, LogOut, Trash2, ChevronLeft, AlertCircle } from "lucide-react";
 
 export default function MyPage() {
   const router = useRouter();

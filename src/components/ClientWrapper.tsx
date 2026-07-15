@@ -2,16 +2,9 @@
 
 import React, { useEffect } from "react";
 import { AuthProvider } from "../context/AuthContext";
-import { useBookingStore } from "../store/bookingStore";
 import Navbar from "./Navbar";
 
 export default function ClientWrapper({ children }: { children: React.ReactNode }) {
-  const loadBookings = useBookingStore((state) => state.loadBookings);
-
-  // 마운트 시 로컬 예매 내역 불러오기
-  useEffect(() => {
-    loadBookings();
-  }, [loadBookings]);
 
   return (
     <AuthProvider>

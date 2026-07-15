@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useBookingStore, Booking } from "../../../../store/bookingStore";
+import { useAuth } from "../../../../context/AuthContext";
 import { getMovieImageUrl } from "../../../../services/tmdb";
 import { ChevronLeft, Home, QrCode, RefreshCw, AlertCircle, Sparkles, MapPin, Calendar, Clock, Ticket } from "lucide-react";
 
@@ -12,13 +13,16 @@ export default function BookingSuccessPage() {
   const router = useRouter();
   const params = useParams();
   const bookingId = params.id as string;
+  const { user } = useAuth();
   const { bookings, loadBookings } = useBookingStore();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [activeTab, setActiveTab] = useState("전체");
 
   useEffect(() => {
-    loadBookings();
-  }, [loadBookings]);
+    if (user) {
+      loadBookings(user.id);
+    }
+  }, [loadBookings, user]);
 
   useEffect(() => {
     if (bookingId && bookings.length > 0) {

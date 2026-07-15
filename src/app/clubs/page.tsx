@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Award, Sparkles, HelpCircle, Film, CheckCircle2 } from "lucide-react";
 import { useBookingStore } from "../../store/bookingStore";
@@ -7,13 +8,22 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function ClubsPage() {
   const router = useRouter();
-  const { myBookings } = useBookingStore();
-  const { chargePoints } = useAuth();
+  const { bookings, loadBookings } = useBookingStore();
+  const { user, chargePoints } = useAuth();
 
-  // 실제 예매 내역(myBookings)을 스캔하여 스페셜 포맷이 포함되었는지 판단
-  const hasImax = myBookings.some(b => b.movieFormats?.includes("IMAX"));
-  const has4dx = myBookings.some(b => b.movieFormats?.includes("4DX"));
-  const hasScreenx = myBookings.some(b => b.movieFormats?.includes("SCREENX"));
+  useEffect(() => {
+    if (user) {
+      loadBookings(user.id);
+    }
+  }, [loadBookings, user]);
+
+  // 실제 내 활성화된 예매 내역(bookings) 필터링
+  const myBookings = bookings.filter((b) => b.userId === user?.id && b.status === "reserved");
+
+  // 예매된 상영관 명칭(theater)에서 특별관 키워드가 검출되는지 판별
+  const hasImax = myBookings.some(b => b.theater.toUpperCase().includes("IMAX"));
+  const has4dx = myBookings.some(b => b.theater.toUpperCase().includes("4DX"));
+  const hasScreenx = myBookings.some(b => b.theater.toUpperCase().includes("SCREENX"));
 
   const stampCount = [hasImax, has4dx, hasScreenx].filter(Boolean).length;
 
