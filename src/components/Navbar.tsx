@@ -35,14 +35,16 @@ export default function Navbar() {
           <span className="text-[10px] font-bold">홈</span>
         </Link>
 
-        {/* 2. 씨네톡 (레퍼런스) */}
-        <button
-          onClick={() => alert("1차 MVP 준비 중인 기능입니다.")}
-          className="flex flex-col items-center justify-center space-y-1 text-slate-400 hover:text-slate-700 cursor-pointer"
+        {/* 2. AI 씨네톡 (챗봇 연동) */}
+        <Link
+          href="/chat"
+          className={`flex flex-col items-center justify-center space-y-1 transition-colors ${
+            isActive("/chat") ? "text-accent" : "text-slate-400 hover:text-slate-700"
+          }`}
         >
-          <MessageSquareCode size={22} />
+          <MessageSquareCode size={22} className={isActive("/chat") ? "scale-105" : ""} />
           <span className="text-[10px] font-bold">씨네톡</span>
-        </button>
+        </Link>
 
         {/* 3. 예매·예약 (중앙 거대 초록 원형 버튼) */}
         <div className="relative -top-4">
