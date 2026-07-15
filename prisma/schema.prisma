@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+model User {
+  id        String          @id
+  email     String          @unique
+  nickname  String
+  points    Int             @default(50000)
+  createdAt DateTime        @default(now()) @map("created_at")
+  bookings  Booking[]
+  histories PointHistory[]
+
+  @@map("users")
+}
+
+model Booking {
+  id          String   @id
+  userId      String   @map("user_id")
+  movieId     Int      @map("movie_id")
+  movieTitle  String   @map("movie_title")
+  moviePoster String   @map("movie_poster")
+  theater     String
+  date        String
+  time        String
+  seats       String[]
+  totalPrice  Int      @map("total_price")
+  status      String   @default("reserved")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("bookings")
+}
+
+model PointHistory {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  amount      Int
+  type        String   // CHARGE | DEDUCT | REFUND
+  description String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("point_histories")
+}

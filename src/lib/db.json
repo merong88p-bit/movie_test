@@ -1,0 +1,21 @@
+{
+  "users": [
+    {
+      "id": "usr_demo123",
+      "email": "demo@movieverse.com",
+      "nickname": "시네필매니아",
+      "points": 81500
+    }
+  ],
+  "bookings": [],
+  "pointHistories": [
+    {
+      "id": "pt_7nlbvlvx7",
+      "userId": "usr_demo123",
+      "amount": 1500,
+      "type": "CHARGE",
+      "description": "무료 포인트 충전",
+      "createdAt": "2026-07-15T02:29:13.428Z"
+    }
+  ]
+}

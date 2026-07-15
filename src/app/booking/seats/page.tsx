@@ -58,7 +58,7 @@ const generatePseudoReservedSeats = (
 
 export default function SeatsSelectionPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   
   // Zustand 스토어 연동
   const {
@@ -70,6 +70,7 @@ export default function SeatsSelectionPage() {
     toggleSeat,
     setSelectedSeats,
     getReservedSeats,
+    loadBookings,
     clearSelection
   } = useBookingStore();
 
@@ -82,6 +83,8 @@ export default function SeatsSelectionPage() {
   const [reservedSeats, setReservedSeats] = useState<string[]>([]);
 
   useEffect(() => {
+    if (loading) return; // 세션 로딩 중일 때는 판단 대기
+
     if (!selectedMovie || !selectedTheater || !selectedDate || !selectedTime) {
       router.replace("/booking");
       return;
@@ -107,34 +110,41 @@ export default function SeatsSelectionPage() {
       }
     }
 
-    // 이미 다른 세션에서 예약 완료된 좌석 로딩
-    const reservedFromStore = getReservedSeats(
-      selectedMovie.id,
-      selectedTheater,
-      selectedDate,
-      selectedTime
-    );
+    const initSeats = async () => {
+      // 1. 최신 예매 현황 백엔드 API에서 로드 동기화
+      await loadBookings(user.id);
 
-    // 선택한 세션의 bookedCount(예매 좌석수) 가져오기
-    const timetables = getMovieTimetables(selectedMovie.id, selectedDate || "");
-    const currentSession = timetables.find((t) => t.time === selectedTime);
-    const bookedCount = currentSession ? currentSession.bookedCount : 35;
+      // 2. 이미 다른 세션에서 예약 완료된 좌석 로딩
+      const reservedFromStore = getReservedSeats(
+        selectedMovie.id,
+        selectedTheater,
+        selectedDate,
+        selectedTime
+      );
 
-    // 결정론적 가상 예약 완료 좌석 생성
-    const pseudoReserved = generatePseudoReservedSeats(
-      selectedMovie.id,
-      selectedDate,
-      selectedTime,
-      bookedCount
-    );
+      // 선택한 세션의 bookedCount(예매 좌석수) 가져오기
+      const timetables = getMovieTimetables(selectedMovie.id, selectedDate || "");
+      const currentSession = timetables.find((t) => t.time === selectedTime);
+      const bookedCount = currentSession ? currentSession.bookedCount : 35;
 
-    // 실제 스토어 예매 정보 + 가상 예약 정보 병합
-    const finalReserved = Array.from(new Set([...reservedFromStore, ...pseudoReserved]));
-    setReservedSeats(finalReserved);
+      // 결정론적 가상 예약 완료 좌석 생성
+      const pseudoReserved = generatePseudoReservedSeats(
+        selectedMovie.id,
+        selectedDate,
+        selectedTime,
+        bookedCount
+      );
+
+      // 실제 스토어 예매 정보 + 가상 예약 정보 병합
+      const finalReserved = Array.from(new Set([...reservedFromStore, ...pseudoReserved]));
+      setReservedSeats(finalReserved);
+    };
+
+    initSeats();
     
     // 이전 좌석 초기화
     setSelectedSeats([]);
-  }, [selectedMovie, selectedTheater, selectedDate, selectedTime, user, router, getReservedSeats, setSelectedSeats]);
+  }, [selectedMovie, selectedTheater, selectedDate, selectedTime, user, loading, router, getReservedSeats, loadBookings, setSelectedSeats]);
 
   const handleSeatClick = (seatId: string) => {
     if (reservedSeats.includes(seatId)) return;

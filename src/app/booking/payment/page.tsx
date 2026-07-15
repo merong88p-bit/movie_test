@@ -11,7 +11,7 @@ import confetti from "canvas-confetti";
 
 export default function BookingPaymentPage() {
   const router = useRouter();
-  const { user, deductPoints, chargePoints } = useAuth();
+  const { user, loading, chargePoints } = useAuth();
   
   const {
     selectedMovie,
@@ -34,6 +34,8 @@ export default function BookingPaymentPage() {
   const [paymentError, setPaymentError] = useState("");
 
   useEffect(() => {
+    if (loading) return; // 세션 복원 완료 대기
+
     if (!selectedMovie || !selectedTheater || !selectedDate || !selectedTime) {
       router.replace("/booking");
       return;
@@ -55,27 +57,17 @@ export default function BookingPaymentPage() {
         }
       }
     }
-  }, [selectedMovie, selectedTheater, selectedDate, selectedTime, user, router]);
+  }, [selectedMovie, selectedTheater, selectedDate, selectedTime, user, loading, router]);
 
-  const handleExecutePayment = () => {
+  const handleExecutePayment = async () => {
     if (!user || !selectedMovie || !selectedTheater || !selectedDate || !selectedTime || !paymentData) return;
 
     setPaymentError("");
     setIsPaying(true);
 
-    // 1.5초간 가상 결제 스피너 진행 연출
-    setTimeout(() => {
-      // 가상 포인트 차감
-      const success = deductPoints(paymentData.price);
-      
-      if (!success) {
-        setPaymentError("가상 포인트 잔액이 부족합니다. 50,000P 가상 충전 후 다시 시도해 주세요.");
-        setIsPaying(false);
-        return;
-      }
-
-      // 예매 내역 추가
-      const booking = addBooking(
+    try {
+      // 백엔드 통합 예매 및 결제 API 호출
+      const booking = await addBooking(
         user.id,
         selectedMovie,
         selectedTheater,
@@ -84,6 +76,15 @@ export default function BookingPaymentPage() {
         paymentData.seats,
         paymentData.price
       );
+
+      if (!booking) {
+        setPaymentError("가상 포인트 잔액이 부족하거나, 이미 예약된 좌석입니다. 상태를 확인해 주세요.");
+        setIsPaying(false);
+        return;
+      }
+
+      // 내 포인트 정보 동기화 새로고침
+      await chargePoints(0);
 
       // 폭죽 성공 애니메이션
       confetti({
@@ -100,7 +101,10 @@ export default function BookingPaymentPage() {
       
       // 성공 완료 페이지로 이동
       router.replace(`/booking/success/${booking.id}`);
-    }, 1500);
+    } catch (e) {
+      setPaymentError("결제 통신 중 에러가 발생했습니다.");
+      setIsPaying(false);
+    }
   };
 
   const handleCharge = () => {

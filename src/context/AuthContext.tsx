@@ -51,42 +51,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // 회원가입
   const signUp = async (email: string, nickname: string): Promise<{ success: boolean; message: string }> => {
     try {
-      const users = JSON.parse(localStorage.getItem("mv_users") || "[]");
-      const exists = users.some((u: any) => u.email === email);
-      if (exists) {
-        return { success: false, message: "이미 가입된 이메일입니다." };
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, nickname })
+      });
+      const data = await res.json();
+      
+      if (!res.ok || !data.success) {
+        return { success: false, message: data.message || "회원가입에 실패했습니다." };
       }
 
-      const newUser: User = {
-        id: "usr_" + Math.random().toString(36).substr(2, 9),
-        email,
-        nickname,
-        points: 50000, // 기본 가입 축하금 50,000원 상당 포인트
-      };
-
-      users.push(newUser);
-      localStorage.setItem("mv_users", JSON.stringify(users));
-
-      // 가입 후 바로 로그인
-      setUser(newUser);
-      localStorage.setItem("mv_session", JSON.stringify(newUser));
+      setUser(data.user);
+      localStorage.setItem("mv_session", JSON.stringify(data.user));
       return { success: true, message: "회원가입에 성공했습니다. 50,000P가 지급되었습니다!" };
     } catch (e) {
-      return { success: false, message: "회원가입 처리 중 요류가 발생했습니다." };
+      return { success: false, message: "회원가입 처리 중 오류가 발생했습니다." };
     }
   };
 
   // 로그인
   const login = async (email: string): Promise<{ success: boolean; message: string }> => {
     try {
-      const users = JSON.parse(localStorage.getItem("mv_users") || "[]");
-      const found = users.find((u: any) => u.email === email);
-      if (!found) {
-        return { success: false, message: "가입되지 않은 이메일입니다. 회원가입을 먼저 진행해 주세요." };
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        return { success: false, message: data.message || "로그인에 실패했습니다." };
       }
 
-      setUser(found);
-      localStorage.setItem("mv_session", JSON.stringify(found));
+      setUser(data.user);
+      localStorage.setItem("mv_session", JSON.stringify(data.user));
       return { success: true, message: "로그인 되었습니다." };
     } catch (e) {
       return { success: false, message: "로그인 처리 중 오류가 발생했습니다." };
@@ -94,26 +93,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // 가상 데모 계정 원클릭 로그인
-  const loginDemo = () => {
-    const demoUser: User = {
-      id: "usr_demo123",
-      email: "demo@movieverse.com",
-      nickname: "시네필매니아",
-      points: 80000, // 테스트를 위해 넉넉히 제공
-    };
-
-    // 로컬 회원 DB에 데모 회원 정보 저장/업데이트
-    const users = JSON.parse(localStorage.getItem("mv_users") || "[]");
-    const existsIdx = users.findIndex((u: any) => u.id === demoUser.id);
-    if (existsIdx > -1) {
-      // 이미 데모 계정이 있다면 그 계정의 최신 정보를 사용하되 세션에 복사
-      setUser(users[existsIdx]);
-      localStorage.setItem("mv_session", JSON.stringify(users[existsIdx]));
-    } else {
-      users.push(demoUser);
-      localStorage.setItem("mv_users", JSON.stringify(users));
-      setUser(demoUser);
-      localStorage.setItem("mv_session", JSON.stringify(demoUser));
+  const loginDemo = async () => {
+    // 데모 계정이 DB에 없다면 자동으로 가입시키거나 로그인 수행
+    const demoEmail = "demo@movieverse.com";
+    const demoNickname = "시네필매니아";
+    
+    let res = await login(demoEmail);
+    if (!res.success) {
+      // 가입되어 있지 않으면 가입 처리
+      res = await signUp(demoEmail, demoNickname);
     }
   };
 
@@ -124,34 +112,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // 가상 포인트 충전
-  const chargePoints = (amount: number) => {
+  const chargePoints = async (amount: number) => {
     if (!user) return;
-    const updatedUser = { ...user, points: user.points + amount };
-    updateUserInDB(updatedUser);
+    try {
+      const res = await fetch("/api/auth/me", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          amount,
+          type: "CHARGE",
+          description: "무료 포인트 충전"
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUser(data.user);
+        localStorage.setItem("mv_session", JSON.stringify(data.user));
+      }
+    } catch (e) {
+      console.error("Failed to charge points", e);
+    }
   };
 
   // 가상 포인트 차감
   const deductPoints = (amount: number): boolean => {
+    // 백엔드 연동 하에 프론트 임시 상태 동기화용 (실제 차감은 bookings API 내부에서 수행)
     if (!user) return false;
     if (user.points < amount) return false;
     
     const updatedUser = { ...user, points: user.points - amount };
-    updateUserInDB(updatedUser);
+    setUser(updatedUser);
+    localStorage.setItem("mv_session", JSON.stringify(updatedUser));
     return true;
   };
 
-  // 로컬 DB 및 세션에 사용자 정보 동기화
-  const updateUserInDB = (updatedUser: User) => {
-    setUser(updatedUser);
-    localStorage.setItem("mv_session", JSON.stringify(updatedUser));
 
-    const users = JSON.parse(localStorage.getItem("mv_users") || "[]");
-    const idx = users.findIndex((u: any) => u.id === updatedUser.id);
-    if (idx > -1) {
-      users[idx] = updatedUser;
-      localStorage.setItem("mv_users", JSON.stringify(users));
-    }
-  };
 
   return (
     <AuthContext.Provider

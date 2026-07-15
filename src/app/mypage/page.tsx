@@ -8,27 +8,37 @@ import { Search, Bell, Ticket, Gift, CreditCard, User, LogOut, Trash2, ChevronLe
 
 export default function MyPage() {
   const router = useRouter();
-  const { user, logout, chargePoints } = useAuth();
+  const { user, loading, logout, chargePoints } = useAuth();
   const { bookings, loadBookings, cancelBooking } = useBookingStore();
   
   // 마이페이지 서브화면: "list" (기본 마이페이지), "history" (예약/결제내역 리스트)
   const [subView, setSubView] = useState<"list" | "history">("list");
 
   useEffect(() => {
+    if (loading) return; // 세션 복원 완료 대기
+
     if (!user) {
       router.replace("/login");
       return;
     }
-    loadBookings();
-  }, [user, router, loadBookings]);
+    loadBookings(user.id);
+  }, [user, loading, router, loadBookings]);
 
   // 해당 유저의 예약 목록 필터링
   const myBookings = bookings.filter((b) => b.userId === user?.id);
 
-  const handleCancel = (bookingId: string) => {
-    if (confirm("정말로 예매를 취소하시겠습니까? 결제금액은 가상 포인트로 전액 환불됩니다.")) {
-      cancelBooking(bookingId);
-      alert("예매가 취소되었습니다. 결제 금액이 전액 환불되었습니다.");
+  const handleCancel = async (bookingId: string) => {
+    if (confirm("정말로 예매를 취소하시겠습니까? 결제금액은 가상 포인트로 전액 환불되었습니다.")) {
+      const res = await cancelBooking(bookingId);
+      if (res.success) {
+        alert("예매가 취소되었습니다. 결제 금액이 전액 환불되었습니다.");
+        if (user) {
+          // 결제 취소 후 포인트 동기화를 위해 잔액 리로드 호출
+          chargePoints(0);
+        }
+      } else {
+        alert("예매 취소 처리에 실패했습니다.");
+      }
     }
   };
 

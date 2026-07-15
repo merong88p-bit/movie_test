@@ -37,7 +37,7 @@ interface BookingState {
   clearSelection: () => void;
   
   // 예매 내역 제어
-  loadBookings: () => void;
+  loadBookings: (userId: string) => Promise<void>;
   addBooking: (
     userId: string, 
     movie: Movie, 
@@ -46,8 +46,8 @@ interface BookingState {
     time: string, 
     seats: string[], 
     totalPrice: number
-  ) => Booking;
-  cancelBooking: (bookingId: string) => { success: boolean; refundedPrice: number };
+  ) => Promise<Booking | null>;
+  cancelBooking: (bookingId: string) => Promise<{ success: boolean; refundedPrice: number }>;
   getReservedSeats: (movieId: number, theater: string, date: string, time: string) => string[];
 }
 
@@ -83,78 +83,81 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     selectedSeats: []
   }),
 
-  // 로컬스토리지에서 예매 리스트 로드
-  loadBookings: () => {
-    if (typeof window !== "undefined") {
-      const savedBookings = localStorage.getItem("mv_bookings");
-      if (savedBookings) {
-        try {
-          set({ bookings: JSON.parse(savedBookings) });
-        } catch (e) {
-          console.error("Failed to parse bookings", e);
-        }
+  // REST API에서 예매 리스트 로드
+  loadBookings: async (userId) => {
+    try {
+      const res = await fetch(`/api/bookings?userId=${userId}`);
+      const data = await res.json();
+      if (data.success) {
+        set({ bookings: data.bookings });
       }
+    } catch (e) {
+      console.error("Failed to load bookings from API", e);
     }
   },
 
-  // 예매 등록
-  addBooking: (userId, movie, theater, date, time, seats, totalPrice) => {
-    const newBooking: Booking = {
-      id: "MV-" + new Date().toISOString().replace(/[-T:.Z]/g, "").slice(0, 8) + "-" + Math.random().toString(36).substr(2, 4).toUpperCase(),
-      userId,
-      movieId: movie.id,
-      movieTitle: movie.title,
-      moviePoster: movie.poster_path,
-      theater,
-      date,
-      time,
-      seats,
-      totalPrice,
-      status: "reserved",
-      createdAt: new Date().toISOString()
-    };
+  // 예매 등록 및 결제 API 호출
+  addBooking: async (userId, movie, theater, date, time, seats, totalPrice) => {
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          movieId: movie.id,
+          movieTitle: movie.title,
+          moviePoster: movie.poster_path,
+          theater,
+          date,
+          time,
+          seats,
+          totalPrice
+        })
+      });
+      const data = await res.json();
+      
+      if (!res.ok || !data.success) {
+        alert(data.message || "예매 결제 처리에 실패했습니다.");
+        return null;
+      }
 
-    const currentBookings = get().bookings;
-    const updatedBookings = [newBooking, ...currentBookings];
-    
-    set({ bookings: updatedBookings });
-    if (typeof window !== "undefined") {
-      localStorage.setItem("mv_bookings", JSON.stringify(updatedBookings));
+      const currentBookings = get().bookings;
+      set({ bookings: [data.booking, ...currentBookings] });
+      return data.booking;
+    } catch (e) {
+      console.error("Failed to add booking", e);
+      return null;
     }
-    
-    return newBooking;
   },
 
-  // 예매 취소
-  cancelBooking: (bookingId) => {
-    const currentBookings = get().bookings;
-    const idx = currentBookings.findIndex((b) => b.id === bookingId);
-    
-    if (idx === -1) {
+  // 예매 취소 및 환불 API 호출
+  cancelBooking: async (bookingId) => {
+    try {
+      const res = await fetch(`/api/bookings?bookingId=${bookingId}`, {
+        method: "DELETE"
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        return { success: false, refundedPrice: 0 };
+      }
+
+      const currentBookings = get().bookings;
+      const updatedBookings = currentBookings.map((b) => 
+        b.id === bookingId ? { ...b, status: "cancelled" as const } : b
+      );
+      set({ bookings: updatedBookings });
+
+      return { success: true, refundedPrice: data.refundedPrice };
+    } catch (e) {
+      console.error("Failed to cancel booking", e);
       return { success: false, refundedPrice: 0 };
     }
-
-    const booking = currentBookings[idx];
-    if (booking.status === "cancelled") {
-      return { success: false, refundedPrice: 0 };
-    }
-
-    // 상태 업데이트
-    const updatedBookings = [...currentBookings];
-    updatedBookings[idx] = { ...booking, status: "cancelled" };
-
-    set({ bookings: updatedBookings });
-    if (typeof window !== "undefined") {
-      localStorage.setItem("mv_bookings", JSON.stringify(updatedBookings));
-    }
-
-    return { success: true, refundedPrice: booking.totalPrice };
   },
 
   // 지정된 상영 세션의 기예약된 좌석 목록 조회
   getReservedSeats: (movieId, theater, date, time) => {
     const currentBookings = get().bookings;
-    // 활성 상태('reserved')의 예매 중에서 해당 상영 세션과 겹치는 좌석들을 병합
     const activeBookings = currentBookings.filter(
       (b) => b.movieId === movieId &&
              b.theater === theater &&
