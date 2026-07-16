@@ -192,8 +192,8 @@ export default function Home() {
       <header className="flex items-center justify-between px-4 py-3 bg-white/95 sticky top-0 z-30 backdrop-blur-sm border-b border-slate-100">
         {/* CGV 스타일의 로고 */}
         <Link href="/" className="flex items-center space-x-1 select-none">
-          <span className="text-[22px] font-black tracking-tighter text-accent italic">
-            CGV
+          <span className="text-[19px] font-black tracking-tighter text-accent italic">
+            다인씨네마
           </span>
           <span className="text-[10px] font-extrabold text-slate-500 border border-slate-200 rounded-xs px-1 py-[1px] ml-1.5 leading-none">
             MVP

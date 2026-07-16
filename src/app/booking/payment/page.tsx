@@ -181,7 +181,7 @@ export default function BookingPaymentPage() {
             onClick={() => alert("1차 MVP 준비 중인 결제 수단입니다.")}
             className="w-full flex items-center justify-between text-xs font-bold text-slate-600 hover:text-slate-950 text-left py-1 cursor-pointer"
           >
-            <span>CGV영화관람권/기프트콘</span>
+            <span>다인씨네마 영화관람권/기프트콘</span>
             <ChevronRight size={14} className="text-slate-400" />
           </button>
           
@@ -189,7 +189,7 @@ export default function BookingPaymentPage() {
             onClick={() => alert("1차 MVP 준비 중인 결제 수단입니다.")}
             className="w-full flex items-center justify-between text-xs font-bold text-slate-600 hover:text-slate-950 text-left py-1 cursor-pointer"
           >
-            <span>CGV기간권/횟수권</span>
+            <span>다인씨네마 기간권/횟수권</span>
             <ChevronRight size={14} className="text-slate-400" />
           </button>
 

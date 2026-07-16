@@ -161,7 +161,7 @@ export default function MyPage() {
             </button>
             
             <button onClick={() => alert("준비 중인 기능입니다.")} className="text-left hover:text-slate-900 cursor-pointer">내 차량번호 조회</button>
-            <button onClick={() => alert("준비 중인 기능입니다.")} className="text-left hover:text-slate-900 cursor-pointer">자주가는 CGV</button>
+            <button onClick={() => alert("준비 중인 기능입니다.")} className="text-left hover:text-slate-900 cursor-pointer">자주가는 다인씨네마</button>
           </div>
         </section>
 

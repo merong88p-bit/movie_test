@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     // 2. LLM의 상담 지침 프롬프트 설계 (System Prompt)
     const systemPrompt = {
       role: "system",
-      content: `당신은 CGV 영화 예매 사이트 'MovieVerse'의 유능하고 다정한 인공지능 비서 'AI 씨네톡'입니다.
+      content: `당신은 다인씨네마 영화 예매 사이트 'MovieVerse'의 유능하고 다정한 인공지능 비서 'AI 씨네톡'입니다.
 다음 지침에 맞춰서 사용자의 물음에 친절하게 답변해 주세요:
 
 1. 답변 톤앤매너:
